@@ -6,9 +6,6 @@
 # under certain conditions
 
 VIDEO_INPUT="$1"
-if [[ $VIDEO_INPUT != *.mp4  ]]; then
-	VIDEO_INPUT="$1.mp4"
-fi
 NUM_MP3_PASSES=10
 NUM_MP4_PASSES=2
 VIDEO_INPUT_NOEXT="${VIDEO_INPUT%.*}"
@@ -16,6 +13,7 @@ VIDEO_INPUT_CONVERTED="${VIDEO_INPUT_NOEXT}_converted.mp4"
 VIDEO_NO_AUDIO="${VIDEO_INPUT_NOEXT}_no_audio.mp4"
 OUTPUT_AAC="${VIDEO_INPUT_NOEXT}_output.aac"
 OUTPUT_MP3="${VIDEO_INPUT_NOEXT}_compressed.mp3"
+OUTPUT_AMR="${VIDEO_INPUT_NOEXT}_compressed.amr"
 OUTPUT_MP4="${VIDEO_INPUT_NOEXT}_compressed.mp4"
 FINAL_MP4="${VIDEO_INPUT_NOEXT}_final.mp4"
 
@@ -34,7 +32,7 @@ if [ "$#" -eq 0 ]; then
   exit 1
 fi
 
-if [ "$#" -ne 1 ]; then
+if [ "$#" -lt 1 ]; then
   echo -e "Incorrect number of arguments.\nUsage: $0 <input>"
   exit 1
 fi
