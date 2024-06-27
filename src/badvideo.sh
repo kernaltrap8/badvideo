@@ -19,7 +19,7 @@ OUTPUT_MP3="${VIDEO_INPUT_NOEXT}_compressed.mp3"
 OUTPUT_MP4="${VIDEO_INPUT_NOEXT}_compressed.mp4"
 FINAL_MP4="${VIDEO_INPUT_NOEXT}_final.mp4"
 
-VERSION="1.3"
+VERSION="1.4"
 PREFIX="\033[37m[\033[0m\033[35m * \033[0m\033[37m]\033[0m"
 
 # Argument checking
@@ -44,20 +44,20 @@ fi
 rm -f "$VIDEO_INPUT_CONVERTED" "${VIDEO_INPUT_NOEXT}_no_audio.mp4" "${VIDEO_INPUT_NOEXT}_output.aac" "$OUTPUT_MP3" "$OUTPUT_MP4"
 echo -e "$PREFIX Converting input to workable format..."
 sleep 1
-ffmpeg -v quiet -stats -i "$VIDEO_INPUT" -c:v copy -c:a aac -strict experimental "$VIDEO_INPUT_CONVERTED"
+ffmpeg -y -v quiet -stats -i "$VIDEO_INPUT" -c:v copy -c:a aac -strict experimental "$VIDEO_INPUT_CONVERTED"
 echo -e "$PREFIX Copying audio stream to external AAC..."
 sleep 1
-ffmpeg -v quiet -stats -i "$VIDEO_INPUT_CONVERTED" -vn -acodec copy "$OUTPUT_AAC"
+ffmpeg -y -v quiet -stats -i "$VIDEO_INPUT_CONVERTED" -vn -acodec copy "$OUTPUT_AAC"
 echo -e "$PREFIX Removing audio stream from video..."
 sleep 1
-ffmpeg -v quiet -stats -i "$VIDEO_INPUT_CONVERTED" -an -c:v copy "$VIDEO_NO_AUDIO"
+ffmpeg -y -v quiet -stats -i "$VIDEO_INPUT_CONVERTED" -an -c:v copy "$VIDEO_NO_AUDIO"
 echo -e "$PREFIX Compressing audio stream..."
 sleep 1
 for (( i=1; i<=$NUM_MP3_PASSES; i++ ))
 do
 	OUTPUT_MP3="${VIDEO_INPUT_NOEXT}_${i}.mp3"
-	ffmpeg -v quiet -stats -i "$OUTPUT_AAC" -c:a libmp3lame -crf 51 -b:a 8 -q 9 -preset veryfast "$OUTPUT_MP3"
-
+	ffmpeg -y -v quiet -stats -i "$OUTPUT_AAC" -c:a libmp3lame -crf 51 -b:a 8 -q 9 -preset veryfast "$OUTPUT_MP3"
+	
 	if [ $i -gt 1 ]; then
 		rm "$OUTPUT_AAC"
 	fi
@@ -69,7 +69,7 @@ sleep 1
 for (( i=1; i<=$NUM_MP4_PASSES; i++ ))
 do
 	OUTPUT_MP4="${VIDEO_INPUT_NOEXT}_${i}.mp4"
-	ffmpeg -v quiet -stats -i "$VIDEO_NO_AUDIO" -c:v libx264 -crf 51 -b:v 50 -preset veryfast "$OUTPUT_MP4"
+	ffmpeg -y -v quiet -stats -i "$VIDEO_NO_AUDIO" -c:v libx264 -crf 51 -b:v 50 -preset veryfast "$OUTPUT_MP4"
 
 	if [ $i -gt 1 ]; then
 		rm "$VIDEO_NO_AUDIO"
@@ -79,7 +79,7 @@ do
 done
 echo -e "$PREFIX Combining compressed streams..."
 sleep 1
-ffmpeg -v quiet -stats -i "$OUTPUT_MP4" -i "$OUTPUT_AAC" -c:v copy -c:a aac -preset veryfast "$FINAL_MP4"
+ffmpeg -y -v quiet -stats -i "$OUTPUT_MP4" -i "$OUTPUT_MP3" -c:v copy -c:a copy -preset veryfast "$FINAL_MP4"
 echo -e "$PREFIX Removing work files..."
 sleep 1
 rm -f "$VIDEO_INPUT_CONVERTED" "${VIDEO_INPUT_NOEXT}_no_audio.mp4" "${VIDEO_INPUT_NOEXT}_output.aac" "$OUTPUT_MP3" "$OUTPUT_MP4"
