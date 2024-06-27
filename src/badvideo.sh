@@ -10,14 +10,16 @@ if [[ $VIDEO_INPUT != *.mp4  ]]; then
 	VIDEO_INPUT="$1.mp4"
 fi
 NUM_MP3_PASSES=10
+NUM_MP4_PASSES=2
 VIDEO_INPUT_NOEXT="${VIDEO_INPUT%.*}"
+VIDEO_INPUT_CONVERTED="${VIDEO_INPUT_NOEXT}_converted.mp4"
 VIDEO_NO_AUDIO="${VIDEO_INPUT_NOEXT}_no_audio.mp4"
 OUTPUT_AAC="${VIDEO_INPUT_NOEXT}_output.aac"
 OUTPUT_MP3="${VIDEO_INPUT_NOEXT}_compressed.mp3"
 OUTPUT_MP4="${VIDEO_INPUT_NOEXT}_compressed.mp4"
 FINAL_MP4="${VIDEO_INPUT_NOEXT}_final.mp4"
 
-VERSION="1.0"
+VERSION="1.3"
 PREFIX="\033[37m[\033[0m\033[35m * \033[0m\033[37m]\033[0m"
 
 # Argument checking
@@ -39,13 +41,16 @@ fi
 
 # Compression jobs
 
-rm -f "$VIDEO_NO_AUDIO" "$OUTPUT_AAC" "$OUTPUT_MP3" "$OUTPUT_MP4" "$FINAL_MP4"
+rm -f "$VIDEO_INPUT_CONVERTED" "${VIDEO_INPUT_NOEXT}_no_audio.mp4" "${VIDEO_INPUT_NOEXT}_output.aac" "$OUTPUT_MP3" "$OUTPUT_MP4"
+echo -e "$PREFIX Converting input to workable format..."
+sleep 1
+ffmpeg -v quiet -stats -i "$VIDEO_INPUT" -c:v copy -c:a aac -strict experimental "$VIDEO_INPUT_CONVERTED"
 echo -e "$PREFIX Copying audio stream to external AAC..."
 sleep 1
-ffmpeg -v quiet -stats -i "$VIDEO_INPUT" -vn -acodec copy "$OUTPUT_AAC"
+ffmpeg -v quiet -stats -i "$VIDEO_INPUT_CONVERTED" -vn -acodec copy "$OUTPUT_AAC"
 echo -e "$PREFIX Removing audio stream from video..."
 sleep 1
-ffmpeg -v quiet -stats -i "$VIDEO_INPUT" -an -c:v copy "$VIDEO_NO_AUDIO"
+ffmpeg -v quiet -stats -i "$VIDEO_INPUT_CONVERTED" -an -c:v copy "$VIDEO_NO_AUDIO"
 echo -e "$PREFIX Compressing audio stream..."
 sleep 1
 for (( i=1; i<=$NUM_MP3_PASSES; i++ ))
@@ -61,10 +66,20 @@ do
 done
 echo -e "$PREFIX Compressing video stream..."
 sleep 1
-ffmpeg -v quiet -stats -i "$VIDEO_NO_AUDIO" -c:v libx264 -crf 51 -preset veryfast "$OUTPUT_MP4"
+for (( i=1; i<=$NUM_MP4_PASSES; i++ ))
+do
+	OUTPUT_MP4="${VIDEO_INPUT_NOEXT}_${i}.mp4"
+	ffmpeg -v quiet -stats -i "$VIDEO_NO_AUDIO" -c:v libx264 -crf 51 -b:v 50 -preset veryfast "$OUTPUT_MP4"
+
+	if [ $i -gt 1 ]; then
+		rm "$VIDEO_NO_AUDIO"
+	fi
+
+	VIDEO_NO_AUDIO="$OUTPUT_MP4"
+done
 echo -e "$PREFIX Combining compressed streams..."
 sleep 1
 ffmpeg -v quiet -stats -i "$OUTPUT_MP4" -i "$OUTPUT_AAC" -c:v copy -c:a aac -preset veryfast "$FINAL_MP4"
 echo -e "$PREFIX Removing work files..."
 sleep 1
-rm -f "$VIDEO_NO_AUDIO" *.aac *.mp3 "$OUTPUT_MP4"
+rm -f "$VIDEO_INPUT_CONVERTED" "${VIDEO_INPUT_NOEXT}_no_audio.mp4" "${VIDEO_INPUT_NOEXT}_output.aac" "$OUTPUT_MP3" "$OUTPUT_MP4"
