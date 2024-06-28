@@ -15,7 +15,6 @@ DATE=$(date +'%d-%m-%y')
 PREFIX="\033[37m[\033[0m\033[35m * \033[0m\033[37m]\033[0m"
 
 # Argument checking
-
 if [ "$1" == "-v" ] || [ "$1" == "--version" ]; then
 	echo -e "badvideo v$VERSION\nThis program is licensed under the BSD-3-Clause license.\nThe license document can be viewed here: https://opensource.org/license/bsd-3-clause"
 	exit 0
@@ -78,7 +77,6 @@ if ! check_bitrate_format "$MP4_RATE"; then
 fi
 
 # Variable setup
-
 VIDEO_INPUT_NOEXT="${VIDEO_INPUT%.*}"
 INPUT_DIR=$(dirname "$VIDEO_INPUT")
 INPUT_FILENAME=$(basename "$VIDEO_INPUT")
@@ -105,7 +103,6 @@ rm -f "$FINAL_MP4"
 mkdir -p "$WORK_DIR"
 
 # Compression jobs
-
 echo -e "$PREFIX Converting input to workable format..."
 sleep 1
 ffmpeg -y -v quiet -stats -i "$VIDEO_INPUT" -c:v copy -c:a aac -strict experimental "$VIDEO_INPUT_CONVERTED"
