@@ -5,7 +5,7 @@
 # This is free software, and you are welcome to redistribute it
 # under certain conditions
 
-VERSION="3.1"
+VERSION="3.1a"
 VIDEO_INPUT="$1"
 NUM_MP3_PASSES_DEFAULT=10
 NUM_MP4_PASSES_DEFAULT=2
@@ -91,9 +91,6 @@ else
     WORK_DIR="${INPUT_DIR}/work_$DATE/"
 fi
 
-# Ensure the work directory exists
-mkdir -p "$WORK_DIR"
-
 # Define full paths for output files using WORK_DIR
 VIDEO_INPUT_CONVERTED="${WORK_DIR}${VIDEO_INPUT_NOEXT}_converted.mp4"
 VIDEO_NO_AUDIO="${WORK_DIR}${VIDEO_INPUT_NOEXT}_no_audio.mp4"
@@ -101,6 +98,11 @@ OUTPUT_AAC="${WORK_DIR}${VIDEO_INPUT_NOEXT}_output.aac"
 OUTPUT_MP3="${WORK_DIR}${VIDEO_INPUT_NOEXT}_compressed.opus"
 OUTPUT_MP4="${WORK_DIR}${VIDEO_INPUT_NOEXT}_compressed.mp4"
 FINAL_MP4="./${VIDEO_INPUT_NOEXT}_final.mp4"
+
+# Remove existing output the tool may have made
+rm -f "$FINAL_MP4"
+# Ensure the work directory exists
+mkdir -p "$WORK_DIR"
 
 # Compression jobs
 
