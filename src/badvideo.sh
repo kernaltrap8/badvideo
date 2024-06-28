@@ -5,30 +5,56 @@
 # This is free software, and you are welcome to redistribute it
 # under certain conditions
 
-VERSION="3.1a"
-VIDEO_INPUT="$1"
+VERSION="3.5"
 NUM_MP3_PASSES_DEFAULT=10
 NUM_MP4_PASSES_DEFAULT=2
 MP3_RATE_DEFAULT="20k"
 MP4_RATE_DEFAULT="50k"
 DATE=$(date +'%d-%m-%y')
+DISABLE_DELETE=1
 PREFIX="\033[37m[\033[0m\033[35m * \033[0m\033[37m]\033[0m"
+PASS_PREFIX="\033[37m[\033[0m\033[32m ! \033[0m\033[37m]\033[0m"
+EXIT_PREFIX="\033[37m[\033[0m\033[31m ! \033[0m\033[37m]\033[0m"
+
+cleanup() {
+	printf "\n$EXIT_PREFIX Exiting."
+	exit 1
+}
+
+trap cleanup SIGINT
+
+# Function to check if bitrate ends with 'k' or 'K'
+check_bitrate_format() {
+    local rate="$1"
+    if [[ "$rate" =~ ^[0-9]+[kK]$ ]]; then
+        return 0  # Valid bitrate format
+    else
+        return 1  # Invalid bitrate format
+    fi
+}
 
 # Argument checking
+if [ "$#" -eq 0 ]; then
+  echo -e "No arguments supplied.\nPlease supply at least the input filename.\nUsage: $0 <input> [mp3_passes] [mp4_passes] [mp3_rate] [mp4_rate]"
+  exit 1
+fi
+
 if [ "$1" == "-v" ] || [ "$1" == "--version" ]; then
-	echo -e "badvideo v$VERSION\nThis program is licensed under the BSD-3-Clause license.\nThe license document can be viewed here: https://opensource.org/license/bsd-3-clause"
-	exit 0
+  echo -e "badvideo v$VERSION\nThis program is licensed under the BSD-3-Clause license.\nThe license document can be viewed here: https://opensource.org/license/bsd-3-clause"
+  exit 0
 fi
 
 if [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
-	echo -e "Tip! You can also specify the passes to do and the bitrates!\nExample: $0 filename.mp4 5 5 20k 100k\nThis will set the mp3 passes to 5, the mp4 passes to 5, the mp3 bitrate to 20, and mp4 bitrate to 100."
-	exit 0
+  echo -e "Tip! You can also specify the passes to do and the bitrates!\nExample: $0 filename.mp4 5 5 20k 100k\nThis will set the mp3 passes to 5, the mp4 passes to 5, the mp3 bitrate to 20, and mp4 bitrate to 100."
+  exit 0
 fi
 
-if [ "$#" -eq 0 ]; then
-  echo -e "No arguments supplied.\nPlease supply at least the input filename.\nUsage: $0 <input>"
-  exit 1
+if [ "$1" == "-d" ] || [ "$1" == "--disable-delete" ]; then
+  DISABLE_DELETE=0
+  shift
 fi
+
+VIDEO_INPUT="$1"
 
 if [ "$#" -ge 2 ]; then
   NUM_MP3_PASSES="$2"
@@ -54,15 +80,16 @@ else
   MP4_RATE="$MP4_RATE_DEFAULT"
 fi
 
-# Function to check if bitrate ends with 'k' or 'K'
-check_bitrate_format() {
-    local rate="$1"
-    if [[ "$rate" =~ ^[0-9]+[kK]$ ]]; then
-        return 0  # Valid bitrate format
-    else
-        return 1  # Invalid bitrate format
-    fi
-}
+# Ensure NUM_MP3_PASSES and NUM_MP4_PASSES are valid integers
+if ! [[ "$NUM_MP3_PASSES" =~ ^[0-9]+$ ]]; then
+  echo "Error: NUM_MP3_PASSES must be an integer."
+  exit 1
+fi
+
+if ! [[ "$NUM_MP4_PASSES" =~ ^[0-9]+$ ]]; then
+  echo "Error: NUM_MP4_PASSES must be an integer."
+  exit 1
+fi
 
 # Check MP3_RATE format
 if ! check_bitrate_format "$MP3_RATE"; then
@@ -116,31 +143,32 @@ echo -e "$PREFIX Compressing audio stream..."
 sleep 1
 for (( i=1; i<=$NUM_MP3_PASSES; i++ ))
 do
-	OUTPUT_MP3="${WORK_DIR}${VIDEO_INPUT_NOEXT}_${i}.opus"
-	#ffmpeg -v quiet -stats -i "$OUTPUT_AAC" -c:a libmp3lame -crf 51 -b:a 500k -q 9 -preset veryfast "$OUTPUT_MP3"
-	ffmpeg -y -v quiet -stats -i "$OUTPUT_AAC" -c:a libopus -ac 1 -ar 16000 -b:a "$MP3_RATE" -vbr constrained "$OUTPUT_MP3"
-	if [ $i -gt 1 ]; then
-		rm "$OUTPUT_AAC"
-	fi
-	
-	OUTPUT_AAC="$OUTPUT_MP3"
+  OUTPUT_MP3="${WORK_DIR}${VIDEO_INPUT_NOEXT}_${i}.opus"
+  printf "$PASS_PREFIX Pass: ${i}\n"
+  ffmpeg -y -v quiet -stats -i "$OUTPUT_AAC" -c:a libopus -ac 1 -ar 16000 -b:a "$MP3_RATE" -vbr constrained "$OUTPUT_MP3"
+  if [ $i -gt 1 ]; then
+    rm "$OUTPUT_AAC"
+  fi
+  OUTPUT_AAC="$OUTPUT_MP3"
 done
 echo -e "$PREFIX Compressing video stream..."
 sleep 1
 for (( i=1; i<=$NUM_MP4_PASSES; i++ ))
 do
-	OUTPUT_MP4="${WORK_DIR}${VIDEO_INPUT_NOEXT}_${i}.mp4"
-	ffmpeg -y -v quiet -stats -i "$VIDEO_NO_AUDIO" -c:v libx264 -b:v "$MP4_RATE" -vf scale=640:480 -preset veryfast "$OUTPUT_MP4"
-	if [ $i -gt 1 ]; then
-		rm "$VIDEO_NO_AUDIO"
-	fi
-
-	VIDEO_NO_AUDIO="$OUTPUT_MP4"
+  OUTPUT_MP4="${WORK_DIR}${VIDEO_INPUT_NOEXT}_${i}.mp4"
+  printf "$PASS_PREFIX Pass: ${i}\n"
+  ffmpeg -y -v quiet -stats -i "$VIDEO_NO_AUDIO" -c:v libx264 -b:v "$MP4_RATE" -vf scale=640:480 -preset veryfast "$OUTPUT_MP4"
+  if [ $i -gt 1 ]; then
+    rm "$VIDEO_NO_AUDIO"
+  fi
+  VIDEO_NO_AUDIO="$OUTPUT_MP4"
 done
 echo -e "$PREFIX Combining compressed streams..."
 sleep 1
 ffmpeg -y -v quiet -stats -i "$OUTPUT_MP4" -i "$OUTPUT_MP3" -vf scale=1920:1080 -c:v libx264 -c:a copy -preset veryfast "$FINAL_MP4"
 echo -e "$PREFIX File outputted to ${FINAL_MP4##*/}"
-echo -e "$PREFIX Removing work files..."
-sleep 1
-rm -rf "$WORK_DIR"
+if [ "$DISABLE_DELETE" -eq 1 ]; then
+  echo -e "$PREFIX Removing work files..."
+  sleep 1
+  rm -rf "$WORK_DIR"
+fi
