@@ -5,7 +5,7 @@
 # This is free software, and you are welcome to redistribute it
 # under certain conditions
 
-VERSION="3.5"
+VERSION="3.7"
 NUM_MP3_PASSES_DEFAULT=10
 NUM_MP4_PASSES_DEFAULT=2
 MP3_RATE_DEFAULT="20k"
@@ -13,15 +13,74 @@ MP4_RATE_DEFAULT="50k"
 DATE=$(date +'%d-%m-%y')
 DISABLE_DELETE=1
 PREFIX="\033[37m[\033[0m\033[35m * \033[0m\033[37m]\033[0m"
+WARNING_PREFIX="\033[37m[\033[0m\033[31m * \033[0m\033[37m]\033[0m"
+DEBUG_PREFIX="\033[37m[\033[0m\033[32m DEBUG \033[0m\033[37m]\033[0m"
 PASS_PREFIX="\033[37m[\033[0m\033[32m ! \033[0m\033[37m]\033[0m"
 EXIT_PREFIX="\033[37m[\033[0m\033[31m ! \033[0m\033[37m]\033[0m"
 
+# Argument checking
+if [ "$#" -eq 0 ]; then
+  echo -e "No arguments supplied.\nPlease supply at least the input filename.\nUsage: $0 <input> [mp3_passes] [mp4_passes] [mp3_rate] [mp4_rate]"
+  exit 1
+fi
+
+if [[ "$1" == "-v" ]] || [[ "$1" == "--version" ]]; then
+  echo -e "badvideo v$VERSION\nThis program is licensed under the BSD-3-Clause license.\nThe license document can be viewed here: https://opensource.org/license/bsd-3-clause"
+  exit 0
+fi
+
+if [[ "$1" == "-h" ]] || [[ "$1" == "--help" ]]; then
+  echo -e "Tip! You can also specify the passes to do and the bitrates!\nExample: $0 filename.mp4 5 5 20k 100k\nThis will set the mp3 passes to 5, the mp4 passes to 5, the mp3 bitrate to 20, and mp4 bitrate to 100."
+  exit 0
+fi
+
+if [[ "$1" == "-d" ]] || [[ "$1" == "--disable-delete" ]]; then
+  DISABLE_DELETE=0
+  shift
+fi
+
 cleanup() {
-	printf "\n$EXIT_PREFIX Exiting."
+	if [[ "$DISABLE_DELETE" -eq 1 ]]; then
+	  echo -e "$WARNING_PREFIX Removing work files..."
+	  sleep 1
+	  rm -rf "$WORK_DIR"
+	fi
+	printf "$EXIT_PREFIX Exiting.\n"
 	exit 1
 }
 
 trap cleanup SIGINT
+
+VIDEO_INPUT="$1"
+
+if [[ "$VIDEO_INPUT" != *.mp4 ]]; then
+	echo "$WARNING_PREFIX Only MP4 files are supported."
+	exit 1
+fi
+
+if [ "$#" -ge 2 ]; then
+   NUM_MP3_PASSES="$2"
+else
+   NUM_MP3_PASSES="$NUM_MP3_PASSES_DEFAULT"
+fi
+	
+if [ "$#" -ge 3 ]; then
+  NUM_MP4_PASSES="$3"
+else
+  NUM_MP4_PASSES="$NUM_MP4_PASSES_DEFAULT"
+fi
+	
+if [ "$#" -ge 4 ]; then
+  MP3_RATE="$4"
+else
+  MP3_RATE="$MP3_RATE_DEFAULT"
+fi
+	
+if [ "$#" -ge 5 ]; then
+  MP4_RATE="$5"
+else
+  MP4_RATE="$MP4_RATE_DEFAULT"
+fi
 
 # Function to check if bitrate ends with 'k' or 'K'
 check_bitrate_format() {
@@ -32,53 +91,6 @@ check_bitrate_format() {
         return 1  # Invalid bitrate format
     fi
 }
-
-# Argument checking
-if [ "$#" -eq 0 ]; then
-  echo -e "No arguments supplied.\nPlease supply at least the input filename.\nUsage: $0 <input> [mp3_passes] [mp4_passes] [mp3_rate] [mp4_rate]"
-  exit 1
-fi
-
-if [ "$1" == "-v" ] || [ "$1" == "--version" ]; then
-  echo -e "badvideo v$VERSION\nThis program is licensed under the BSD-3-Clause license.\nThe license document can be viewed here: https://opensource.org/license/bsd-3-clause"
-  exit 0
-fi
-
-if [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
-  echo -e "Tip! You can also specify the passes to do and the bitrates!\nExample: $0 filename.mp4 5 5 20k 100k\nThis will set the mp3 passes to 5, the mp4 passes to 5, the mp3 bitrate to 20, and mp4 bitrate to 100."
-  exit 0
-fi
-
-if [ "$1" == "-d" ] || [ "$1" == "--disable-delete" ]; then
-  DISABLE_DELETE=0
-  shift
-fi
-
-VIDEO_INPUT="$1"
-
-if [ "$#" -ge 2 ]; then
-  NUM_MP3_PASSES="$2"
-else
-  NUM_MP3_PASSES="$NUM_MP3_PASSES_DEFAULT"
-fi
-
-if [ "$#" -ge 3 ]; then
-  NUM_MP4_PASSES="$3"
-else
-  NUM_MP4_PASSES="$NUM_MP4_PASSES_DEFAULT"
-fi
-
-if [ "$#" -ge 4 ]; then
-  MP3_RATE="$4"
-else
-  MP3_RATE="$MP3_RATE_DEFAULT"
-fi
-
-if [ "$#" -ge 5 ]; then
-  MP4_RATE="$5"
-else
-  MP4_RATE="$MP4_RATE_DEFAULT"
-fi
 
 # Ensure NUM_MP3_PASSES and NUM_MP4_PASSES are valid integers
 if ! [[ "$NUM_MP3_PASSES" =~ ^[0-9]+$ ]]; then
@@ -104,13 +116,12 @@ if ! check_bitrate_format "$MP4_RATE"; then
 fi
 
 # Variable setup
-VIDEO_INPUT_NOEXT="${VIDEO_INPUT%.*}"
 INPUT_DIR=$(dirname "$VIDEO_INPUT")
 INPUT_FILENAME=$(basename "$VIDEO_INPUT")
 VIDEO_INPUT_NOEXT="${INPUT_FILENAME%.*}"
 
 # Construct paths for output files
-if [ "$INPUT_DIR" == "." ]; then
+if [[ "$INPUT_DIR" == "." ]]; then
     WORK_DIR="./work_$DATE/"
 else
     WORK_DIR="${INPUT_DIR}/work_$DATE/"
@@ -168,7 +179,7 @@ sleep 1
 ffmpeg -y -v quiet -stats -i "$OUTPUT_MP4" -i "$OUTPUT_MP3" -vf scale=1920:1080 -c:v libx264 -c:a copy -preset veryfast "$FINAL_MP4"
 echo -e "$PREFIX File outputted to ${FINAL_MP4##*/}"
 if [ "$DISABLE_DELETE" -eq 1 ]; then
-  echo -e "$PREFIX Removing work files..."
+  echo -e "$WARNING_PREFIX Removing work files..."
   sleep 1
   rm -rf "$WORK_DIR"
 fi
