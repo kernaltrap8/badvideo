@@ -5,7 +5,7 @@
 # This is free software, and you are welcome to redistribute it
 # under certain conditions
 
-VERSION="3.7"
+VERSION="4.2"
 NUM_MP3_PASSES_DEFAULT=10
 NUM_MP4_PASSES_DEFAULT=2
 MP3_RATE_DEFAULT="20k"
@@ -14,7 +14,7 @@ DATE=$(date +'%d-%m-%y')
 DISABLE_DELETE=1
 PREFIX="\033[37m[\033[0m\033[35m * \033[0m\033[37m]\033[0m"
 WARNING_PREFIX="\033[37m[\033[0m\033[31m * \033[0m\033[37m]\033[0m"
-DEBUG_PREFIX="\033[37m[\033[0m\033[32m DEBUG \033[0m\033[37m]\033[0m"
+#DEBUG_PREFIX="\033[37m[\033[0m\033[32m DEBUG \033[0m\033[37m]\033[0m"
 PASS_PREFIX="\033[37m[\033[0m\033[32m ! \033[0m\033[37m]\033[0m"
 EXIT_PREFIX="\033[37m[\033[0m\033[31m ! \033[0m\033[37m]\033[0m"
 
@@ -45,16 +45,24 @@ cleanup() {
 	  sleep 1
 	  rm -rf "$WORK_DIR"
 	fi
-	printf "$EXIT_PREFIX Exiting.\n"
+	echo -e "$EXIT_PREFIX Exiting."
 	exit 1
+}
+
+die() {
+	exit="$?"
+	if [[ "$exit" -ne 0  ]]; then
+		echo -e "$EXIT_PREFIX FFMpeg returned exit code $exit!"
+	fi
+	cleanup
 }
 
 trap cleanup SIGINT
 
 VIDEO_INPUT="$1"
 
-if [[ "$VIDEO_INPUT" != *.mp4 ]]; then
-	echo "$WARNING_PREFIX Only MP4 files are supported."
+if [[ "$VIDEO_INPUT" == *.mp3 ]]; then
+	echo -e "$WARNING_PREFIX Only video files are supported."
 	exit 1
 fi
 
@@ -143,20 +151,20 @@ mkdir -p "$WORK_DIR"
 # Compression jobs
 echo -e "$PREFIX Converting input to workable format..."
 sleep 1
-ffmpeg -y -v quiet -stats -i "$VIDEO_INPUT" -c:v copy -c:a aac -strict experimental "$VIDEO_INPUT_CONVERTED"
+ffmpeg -y -v quiet -stats -i "$VIDEO_INPUT" -c:v libx264 -c:a aac -strict experimental "$VIDEO_INPUT_CONVERTED" || die
 echo -e "$PREFIX Copying audio stream to external AAC..."
 sleep 1
-ffmpeg -y -v quiet -stats -i "$VIDEO_INPUT_CONVERTED" -vn -acodec copy "$OUTPUT_AAC"
+ffmpeg -y -v quiet -stats -i "$VIDEO_INPUT_CONVERTED" -vn -acodec copy "$OUTPUT_AAC" || die
 echo -e "$PREFIX Removing audio stream from video..."
 sleep 1
-ffmpeg -y -v quiet -stats -i "$VIDEO_INPUT_CONVERTED" -an -c:v copy "$VIDEO_NO_AUDIO"
+ffmpeg -y -v quiet -stats -i "$VIDEO_INPUT_CONVERTED" -an -c:v copy "$VIDEO_NO_AUDIO" || die
 echo -e "$PREFIX Compressing audio stream..."
 sleep 1
-for (( i=1; i<=$NUM_MP3_PASSES; i++ ))
+for (( i=1; i<=NUM_MP3_PASSES; i++ ))
 do
   OUTPUT_MP3="${WORK_DIR}${VIDEO_INPUT_NOEXT}_${i}.opus"
-  printf "$PASS_PREFIX Pass: ${i}\n"
-  ffmpeg -y -v quiet -stats -i "$OUTPUT_AAC" -c:a libopus -ac 1 -ar 16000 -b:a "$MP3_RATE" -vbr constrained "$OUTPUT_MP3"
+  echo -e "$PASS_PREFIX Pass: ${i}"
+  ffmpeg -y -v quiet -stats -i "$OUTPUT_AAC" -c:a libopus -ac 1 -ar 16000 -b:a "$MP3_RATE" -vbr constrained "$OUTPUT_MP3" || die
   if [ $i -gt 1 ]; then
     rm "$OUTPUT_AAC"
   fi
@@ -164,11 +172,11 @@ do
 done
 echo -e "$PREFIX Compressing video stream..."
 sleep 1
-for (( i=1; i<=$NUM_MP4_PASSES; i++ ))
+for (( i=1; i<=NUM_MP4_PASSES; i++ ))
 do
   OUTPUT_MP4="${WORK_DIR}${VIDEO_INPUT_NOEXT}_${i}.mp4"
-  printf "$PASS_PREFIX Pass: ${i}\n"
-  ffmpeg -y -v quiet -stats -i "$VIDEO_NO_AUDIO" -c:v libx264 -b:v "$MP4_RATE" -vf scale=640:480 -preset veryfast "$OUTPUT_MP4"
+  echo -e "$PASS_PREFIX Pass: ${i}"
+  ffmpeg -y -v quiet -stats -i "$VIDEO_NO_AUDIO" -c:v libx264 -b:v "$MP4_RATE" -vf scale=640:480 -preset veryfast "$OUTPUT_MP4" || die
   if [ $i -gt 1 ]; then
     rm "$VIDEO_NO_AUDIO"
   fi
@@ -176,7 +184,7 @@ do
 done
 echo -e "$PREFIX Combining compressed streams..."
 sleep 1
-ffmpeg -y -v quiet -stats -i "$OUTPUT_MP4" -i "$OUTPUT_MP3" -vf scale=1920:1080 -c:v libx264 -c:a copy -preset veryfast "$FINAL_MP4"
+ffmpeg -y -v quiet -stats -i "$OUTPUT_MP4" -i "$OUTPUT_MP3" -vf scale=1920:1080 -c:v libx264 -c:a copy -preset veryfast "$FINAL_MP4" || die
 echo -e "$PREFIX File outputted to ${FINAL_MP4##*/}"
 if [ "$DISABLE_DELETE" -eq 1 ]; then
   echo -e "$WARNING_PREFIX Removing work files..."
