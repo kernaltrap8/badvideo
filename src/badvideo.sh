@@ -7,13 +7,14 @@
 
 # Variable setup
 
-VERSION="5.0"
+VERSION="5.0a-hotfix"
 NUM_MP3_PASSES_DEFAULT=10
 NUM_MP4_PASSES_DEFAULT=2
 MP3_RATE_DEFAULT="20k"
 MP4_RATE_DEFAULT="50k"
 DATE=$(date +'%d-%m-%y')
 DISABLE_DELETE=1
+ENABLE_DEBUG=0
 PREFIX=$'\e[37m[\e[0m\e[35m * \e[0m\e[37m]\e[0m'
 START_PREFIX=$'\e[37m[\e[0m\e[32m * \e[0m\e[37m]\e[0m'
 WARNING_PREFIX=$'\e[37m[\e[0m\e[31m * \e[0m\e[37m]\e[0m'
@@ -26,7 +27,7 @@ BANNER_P4=$'\e[95m'"|_.__/\__,_\__,_|\_/|_\__,_\___\___/"$'\e[0m'
 
 # Function definitions
 check_args() {
-	while getopts ":vhd" opt; do
+	while getopts ":vhdD" opt; do
 		case $opt in
 			v)
 				echo -e "badvideo v$VERSION\nThis program is licensed under the BSD-3-Clause license.\nThe license document can be viewed here: https://opensource.org/license/bsd-3-clause"
@@ -38,6 +39,9 @@ check_args() {
 				;;
 			d)
 				DISABLE_DELETE=0
+				;;
+			D)
+				ENABLE_DEBUG=1
 				;;
 			\?)
 				echo "Invalid option: -$OPTARG" >&2
@@ -140,6 +144,31 @@ panic() {
 	fi
 }
 
+debug() {
+	echo "VIDEO_INPUT: $VIDEO_INPUT"
+	echo "NUM_MP3_PASSES: $NUM_MP3_PASSES"
+	echo "NUM_MP4_PASSES_DEFAULT: $NUM_MP4_PASSES"
+	echo "MP3_RATE: $MP3_RATE"
+	echo "MP4_RATE: $MP4_RATE"
+	echo "DISABLE_DELETE: $DISABLE_DELETE"
+	echo "PREFIX: $PREFIX"
+	echo "START_PREFIX: $START_PREFIX"
+	echo "WARNING_PREFIX: $WARNING_PREFIX"
+	echo "PASS_PREFIX: $PASS_PREFIX"
+	echo "EXIT_PREFIX: $EXIT_PREFIX"
+	echo "VIDEO_INPUT: $VIDEO_INPUT"
+	echo "INPUT_DIR: $INPUT_DIR"
+	echo "INPUT_FILENAME: $INPUT_FILENAME"
+	echo "VIDEO_INPUT_NOEXT: $VIDEO_INPUT_NOEXT"
+	echo "VIDEO_INPUT_CONVERTED: $VIDEO_INPUT_CONVERTED"
+	echo "VIDEO_NO_AUDIO: $VIDEO_NO_AUDIO"
+	echo "OUTPUT_AAC: $OUTPUT_AAC"
+	echo "OUTPUT_MP3: $OUTPUT_MP3"
+	echo "OUTPUT_MP4: $OUTPUT_MP4"
+	echo "FINAL_MP4: $FINAL_MP4"
+	echo "WORK_DIR: $WORK_DIR"
+}
+
 badvideo() {
 	for (( i=1; i<=4; i++))
 	do
@@ -152,22 +181,25 @@ badvideo() {
 	INPUT_DIR=$(dirname "$VIDEO_INPUT")
 	INPUT_FILENAME=$(basename "$VIDEO_INPUT")
 	VIDEO_INPUT_NOEXT="${INPUT_FILENAME%.*}"
+	if [[ "$INPUT_DIR" == "." ]]; then
+		WORK_DIR="./work_${VIDEO_INPUT_NOEXT}_$DATE/"
+	else
+		WORK_DIR="${INPUT_DIR}/work_${VIDEO_INPUT_NOEXT}_$DATE/"
+	fi
 	VIDEO_INPUT_CONVERTED="${WORK_DIR}${VIDEO_INPUT_NOEXT}_converted.mp4"
 	VIDEO_NO_AUDIO="${WORK_DIR}${VIDEO_INPUT_NOEXT}_no_audio.mp4"
 	OUTPUT_AAC="${WORK_DIR}${VIDEO_INPUT_NOEXT}_output.aac"
 	OUTPUT_MP3="${WORK_DIR}${VIDEO_INPUT_NOEXT}_compressed.opus"
 	OUTPUT_MP4="${WORK_DIR}${VIDEO_INPUT_NOEXT}_compressed.mp4"
 	FINAL_MP4="./${VIDEO_INPUT_NOEXT}_final.mp4"
-	# Construct paths for output files
-	if [[ "$INPUT_DIR" == "." ]]; then
-		WORK_DIR="./work_${VIDEO_INPUT_NOEXT}_$DATE/"
-	else
-		WORK_DIR="${INPUT_DIR}/work_${VIDEO_INPUT_NOEXT}_$DATE/"
-	fi
 	# Remove existing output the tool may have made
 	rm -f "$FINAL_MP4"
 	# Ensure the work directory exists
 	mkdir -p "$WORK_DIR"
+	if [[ "$ENABLE_DEBUG" -eq 1 ]]; then
+		echo -e "$WARNING_PREFIX Debug is enabled!"
+		debug
+	fi
 	# Compression jobs
 	echo -e "$PREFIX Converting input to workable format..."
 	sleep 1
