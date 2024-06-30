@@ -11,3 +11,8 @@ badvideo is a bash script that uses ffmpeg to heavily compress, ruin the bitrate
 badvideo is written in Bash. This is not a hacktool, it is merely for fun.
 <br>
 Licensed under the BSD-3-Clause license.
+# Demo
+Before:<br>
+![image](https://raw.githubusercontent.com/kernaltrap8/badvideo/main/src/demo/demo_before.gif)<br>
+After:<br>
+![image](https://raw.githubusercontent.com/kernaltrap8/badvideo/main/src/demo/demo_after.gif)
