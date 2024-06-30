@@ -14,10 +14,15 @@ MP3_RATE_DEFAULT="20k"
 MP4_RATE_DEFAULT="50k"
 DATE=$(date +'%d-%m-%y')
 DISABLE_DELETE=1
-PREFIX="\033[37m[\033[0m\033[35m * \033[0m\033[37m]\033[0m"
-WARNING_PREFIX="\033[37m[\033[0m\033[31m * \033[0m\033[37m]\033[0m"
-PASS_PREFIX="\033[37m[\033[0m\033[32m ! \033[0m\033[37m]\033[0m"
-EXIT_PREFIX="\033[37m[\033[0m\033[31m ! \033[0m\033[37m]\033[0m"
+PREFIX=$'\e[37m[\e[0m\e[35m * \e[0m\e[37m]\e[0m'
+START_PREFIX=$'\e[37m[\e[0m\e[32m * \e[0m\e[37m]\e[0m'
+WARNING_PREFIX=$'\e[37m[\e[0m\e[31m * \e[0m\e[37m]\e[0m'
+PASS_PREFIX=$'\e[37m[\e[0m\e[32m ! \e[0m\e[37m]\e[0m'
+EXIT_PREFIX=$'\e[37m[\e[0m\e[31m ! \e[0m\e[37m]\e[0m'
+BANNER_P1=$'\e[95m'" _             _     _    _"$'\e[0m'
+BANNER_P2=$'\e[95m'"| |__  __ _ __| |_ _(_)__| |___ ___"$'\e[0m'
+BANNER_P3=$'\e[95m'"| '_ \/ _\` / _\` \ V / / _\` / -_) _ \\"$'\e[0m'
+BANNER_P4=$'\e[95m'"|_.__/\__,_\__,_|\_/|_\__,_\___\___/"$'\e[0m'
 
 # Function definitions
 check_args() {
@@ -136,6 +141,13 @@ panic() {
 }
 
 badvideo() {
+	for (( i=1; i<=4; i++))
+	do
+		banner_var="BANNER_P${i}"
+		echo -e "${!banner_var}"
+	done
+	echo "Ruin your videos in SECONDS!"
+	echo -e "$START_PREFIX Starting badvideo v$VERSION"
 	# Variable setup for jobs
 	INPUT_DIR=$(dirname "$VIDEO_INPUT")
 	INPUT_FILENAME=$(basename "$VIDEO_INPUT")
