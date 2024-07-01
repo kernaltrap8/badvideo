@@ -6,7 +6,7 @@
 # under certain conditions
 
 # Variable setup
-VERSION="5.2a"
+VERSION="5.2a-hotfix"
 NUM_MP3_PASSES=10
 NUM_MP4_PASSES=2
 MP3_RATE="20k"
@@ -197,10 +197,6 @@ badvideo() {
 	done
 	echo "Ruin your videos in SECONDS!"
 	echo -e "$START_PREFIX Starting badvideo v$VERSION"
-	NUM_MP3_PASSES=10
-	NUM_MP4_PASSES=2
-	MP3_RATE="20k"
-	MP4_RATE="50k"
 	if [[ "$MP3_RATE" == "20k" && "$MP4_RATE" == "50k" && "$NUM_MP3_PASSES" == 10 && "$NUM_MP4_PASSES" == 2 ]]; then
 		echo -e "$START_PREFIX Using default settings"
 	else
