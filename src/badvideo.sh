@@ -200,7 +200,7 @@ badvideo() {
 	if [[ "$MP3_RATE" == "20k" && "$MP4_RATE" == "50k" && "$NUM_MP3_PASSES" == 10 && "$NUM_MP4_PASSES" == 2 ]]; then
 		echo -e "$START_PREFIX Using default settings"
 	else
-		echo -e "$START_PREFIX Using settings: MP3_RATE: ${MP3_RATE}, MP4_RATE: ${MP4_RATE}, MP3_PASSES: ${NUM_MP3_PASSES}, MP4_PASSES: ${NUM_MP4_PASSES}"
+		echo -e "$START_PREFIX Using user specified settings"
 	fi
 	# Variable setup for jobs
 	INPUT_DIR=$(dirname "$VIDEO_INPUT")
