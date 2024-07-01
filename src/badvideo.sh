@@ -7,11 +7,11 @@
 
 # Variable setup
 
-VERSION="5.0a-hotfix"
-NUM_MP3_PASSES_DEFAULT=10
-NUM_MP4_PASSES_DEFAULT=2
-MP3_RATE_DEFAULT="20k"
-MP4_RATE_DEFAULT="50k"
+VERSION="5.2"
+NUM_MP3_PASSES=10
+NUM_MP4_PASSES=2
+MP3_RATE="20k"
+MP4_RATE="50k"
 DATE=$(date +'%d-%m-%y')
 DISABLE_DELETE=1
 ENABLE_DEBUG=0
@@ -27,60 +27,81 @@ BANNER_P4=$'\e[95m'"|_.__/\__,_\__,_|\_/|_\__,_\___\___/"$'\e[0m'
 
 # Function definitions
 check_args() {
-	while getopts ":vhdD" opt; do
-		case $opt in
-			v)
-				echo -e "badvideo v$VERSION\nThis program is licensed under the BSD-3-Clause license.\nThe license document can be viewed here: https://opensource.org/license/bsd-3-clause"
-				exit 0
-				;;
-			h)
-				echo -e "Usage: $0 [-d] [-v] [-h] <input> [mp3_passes] [mp4_passes] [mp3_rate] [mp4_rate]"
-				exit 0
-				;;
-			d)
-				DISABLE_DELETE=0
-				;;
-			D)
-				ENABLE_DEBUG=1
-				;;
-			\?)
-				echo "Invalid option: -$OPTARG" >&2
-				exit 1
-				;;
-		esac
-	done
-	shift $((OPTIND -1))
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -v|--version)
+                echo -e "badvideo v$VERSION\nThis program is licensed under the BSD-3-Clause license.\nThe license document can be viewed here: https://opensource.org/license/bsd-3-clause"
+                exit 0
+                ;;
+            -h|--help)
+                echo -e "Usage: $0 [-v] [-h] [-d|--disable-delete] [-D|--debug] [-p1|--mp3-passes] <mp3_passes> [-p2|--mp4-passes] <mp4_passes> [-b1|--mp3-bitrate] <mp3_bitrate> [-b2|--mp4-bitrate] <mp4_bitrate> <input>"
+                exit 0
+                ;;
+            -d|--disable-delete)
+                DISABLE_DELETE=0
+                shift
+                ;;
+            -D|--debug)
+                ENABLE_DEBUG=1
+                shift
+                ;;
+            -p1|--mp3-passes)
+                if [[ -n "$2" && "$2" != -* ]]; then
+                    NUM_MP3_PASSES="$2"
+                    shift 2
+                else
+                    echo "Error: -p1 requires an argument" >&2
+                    exit 1
+                fi
+                ;;
+            -p2|--mp4-passes)
+                if [[ -n "$2" && "$2" != -* ]]; then
+                    NUM_MP4_PASSES="$2"
+                    shift 2
+                else
+                    echo "Error: -p2 requires an argument" >&2
+                    exit 1
+                fi
+                ;;
+            -b1|--mp3-bitrate)
+                if [[ -n "$2" && "$2" != -* ]]; then
+                    MP3_RATE="$2"
+                    shift 2
+                else
+                    echo "Error: -b1 requires an argument" >&2
+                    exit 1
+                fi
+                ;;
+            -b2|--mp4-bitrate)
+                if [[ -n "$2" && "$2" != -* ]]; then
+                    MP4_RATE="$2"
+                    shift 2
+                else
+                    echo "Error: -b2 requires an argument" >&2
+                    exit 1
+                fi
+                ;;
+            --)
+                shift
+                break
+                ;;
+            -*)
+                echo "Invalid option: $1" >&2
+                exit 1
+                ;;
+            *)
+                break
+                ;;
+        esac
+    done
 
-	if [ "$#" -lt 1 ]; then
-		echo -e "No input file supplied.\nPlease supply at least the input filename.\nUsage: $0 [-d] [-v] [-h] <input> [mp3_passes] [mp4_passes] [mp3_rate] [mp4_rate]"
-		exit 1
-	fi
+    if [ "$#" -lt 1 ]; then
+        echo -e "No input file supplied.\nPlease supply at least the input filename.\nUsage: $0 [-v] [-h] [-d|--disable-delete] [-D|--debug] [-p1|--mp3-passes] <mp3_passes> [-p2|--mp4-passes] <mp4_passes> [-b1|--mp3-bitrate] <mp3_bitrate> [-b2|--mp4-bitrate] <mp4_bitrate> <input>"
+        exit 1
+    fi
 
-	VIDEO_INPUT="$1"
-
-	if [ "$#" -ge 2 ]; then
-		NUM_MP3_PASSES="$2"
-	else
-		NUM_MP3_PASSES="$NUM_MP3_PASSES_DEFAULT"
-	fi
-		
-	if [ "$#" -ge 3 ]; then
-		NUM_MP4_PASSES="$3"
-	else
-		NUM_MP4_PASSES="$NUM_MP4_PASSES_DEFAULT"
-	fi
-		
-	if [ "$#" -ge 4 ]; then
-		MP3_RATE="$4"
-	else
-		MP3_RATE="$MP3_RATE_DEFAULT"
-	fi
-		
-	if [ "$#" -ge 5 ]; then
-		MP4_RATE="$5"
-	else
-		MP4_RATE="$MP4_RATE_DEFAULT"
-	fi
+    VIDEO_INPUT="$1"
+    shift
 }
 
 cleanup() {
@@ -147,7 +168,7 @@ panic() {
 debug() {
 	echo "VIDEO_INPUT: $VIDEO_INPUT"
 	echo "NUM_MP3_PASSES: $NUM_MP3_PASSES"
-	echo "NUM_MP4_PASSES_DEFAULT: $NUM_MP4_PASSES"
+	echo "NUM_MP4_PASSES: $NUM_MP4_PASSES"
 	echo "MP3_RATE: $MP3_RATE"
 	echo "MP4_RATE: $MP4_RATE"
 	echo "DISABLE_DELETE: $DISABLE_DELETE"
