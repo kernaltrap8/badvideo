@@ -6,7 +6,6 @@
 # under certain conditions
 
 # Variable setup
-
 VERSION="5.2"
 NUM_MP3_PASSES=10
 NUM_MP4_PASSES=2
@@ -34,7 +33,7 @@ check_args() {
                 exit 0
                 ;;
             -h|--help)
-                echo -e "Usage: $0 [-v] [-h] [-d|--disable-delete] [-D|--debug] [-p1|--mp3-passes] <mp3_passes> [-p2|--mp4-passes] <mp4_passes> [-b1|--mp3-bitrate] <mp3_bitrate> [-b2|--mp4-bitrate] <mp4_bitrate> <input>"
+                echo -e "Usage: badvideo [-v] [-h] [-d|--disable-delete] [-D|--debug] [-p1|--audio-passes] <audio_passes> [-p2|--video-passes] <video_passes> [-b1|--audio-bitrate] <audio_bitrate> [-b2|--video-bitrate] <video_bitrate> <input>"
                 exit 0
                 ;;
             -d|--disable-delete)
@@ -45,7 +44,7 @@ check_args() {
                 ENABLE_DEBUG=1
                 shift
                 ;;
-            -p1|--mp3-passes)
+            -p1|--audio-passes)
                 if [[ -n "$2" && "$2" != -* ]]; then
                     NUM_MP3_PASSES="$2"
                     shift 2
@@ -54,7 +53,7 @@ check_args() {
                     exit 1
                 fi
                 ;;
-            -p2|--mp4-passes)
+            -p2|--video-passes)
                 if [[ -n "$2" && "$2" != -* ]]; then
                     NUM_MP4_PASSES="$2"
                     shift 2
@@ -63,7 +62,7 @@ check_args() {
                     exit 1
                 fi
                 ;;
-            -b1|--mp3-bitrate)
+            -b1|--audio-bitrate)
                 if [[ -n "$2" && "$2" != -* ]]; then
                     MP3_RATE="$2"
                     shift 2
@@ -72,7 +71,7 @@ check_args() {
                     exit 1
                 fi
                 ;;
-            -b2|--mp4-bitrate)
+            -b2|--video-bitrate)
                 if [[ -n "$2" && "$2" != -* ]]; then
                     MP4_RATE="$2"
                     shift 2
@@ -96,7 +95,7 @@ check_args() {
     done
 
     if [ "$#" -lt 1 ]; then
-        echo -e "No input file supplied.\nPlease supply at least the input filename.\nUsage: $0 [-v] [-h] [-d|--disable-delete] [-D|--debug] [-p1|--mp3-passes] <mp3_passes> [-p2|--mp4-passes] <mp4_passes> [-b1|--mp3-bitrate] <mp3_bitrate> [-b2|--mp4-bitrate] <mp4_bitrate> <input>"
+        echo -e "No input file supplied.\nPlease supply at least the input filename.\nUsage: badvideo [-v] [-h] [-d|--disable-delete] [-D|--debug] [-p1|--audio-passes] <audio_passes> [-p2|--video-passes] <video_passes> [-b1|--audio-bitrate] <audio_bitrate> [-b2|--video-bitrate] <video_bitrate> <input>"
         exit 1
     fi
 
