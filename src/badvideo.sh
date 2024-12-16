@@ -6,7 +6,7 @@
 # under certain conditions
 
 # Variable setup
-VERSION="5.2a-hotfix"
+VERSION="5.3"
 NUM_MP3_PASSES=10
 NUM_MP4_PASSES=2
 MP3_RATE="20k"
@@ -14,6 +14,8 @@ MP4_RATE="50k"
 DATE=$(date +'%d-%m-%y')
 DISABLE_DELETE=1
 ENABLE_DEBUG=0
+USE_CUSTOM_VIDEO_RESOLUTION=0
+CUSTOM_SETTINGS_TOKEN=0
 PREFIX=$'\e[37m[\e[0m\e[35m * \e[0m\e[37m]\e[0m'
 START_PREFIX=$'\e[37m[\e[0m\e[32m * \e[0m\e[37m]\e[0m'
 WARNING_PREFIX=$'\e[37m[\e[0m\e[31m * \e[0m\e[37m]\e[0m'
@@ -25,6 +27,19 @@ BANNER_P3=$'\e[95m'"| '_ \/ _\` / _\` \ V / / _\` / -_) _ \\"$'\e[0m'
 BANNER_P4=$'\e[95m'"|_.__/\__,_\__,_|\_/|_\__,_\___\___/"$'\e[0m'
 
 # Function definitions
+arg_tools() {
+	if [[ "$1" == "set_token" ]]; then
+		if [[ -n "$2" ]]; then
+			CUSTOM_SETTINGS_TOKEN="$2"
+		else
+			echo -ne "$EXIT_PREFIX You forgot to supply a token value to arg_tools()"
+			cleanup
+		fi
+	else
+		echo -ne "$EXIT_PREFIX Unknown command passed to arg_tools()"
+		cleanup
+	fi
+}
 check_args() {
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -38,15 +53,18 @@ check_args() {
                 ;;
             -d|--disable-delete)
                 DISABLE_DELETE=0
+                arg_tools set_token 1
                 shift
                 ;;
             -D|--debug)
                 ENABLE_DEBUG=1
+                arg_tools set_token 2
                 shift
                 ;;
             -p1|--audio-passes)
                 if [[ -n "$2" && "$2" != -* ]]; then
                     NUM_MP3_PASSES="$2"
+                    arg_tools set_token 3
                     shift 2
                 else
                     echo "Error: -p1 requires an argument" >&2
@@ -56,16 +74,29 @@ check_args() {
             -p2|--video-passes)
                 if [[ -n "$2" && "$2" != -* ]]; then
                     NUM_MP4_PASSES="$2"
+                    arg_tools set_token 4
                     shift 2
                 else
                     echo "Error: -p2 requires an argument" >&2
                     exit 1
                 fi
                 ;;
+            -r|--resolution)
+            	if [[ -n "$2" && "$2" != -* ]]; then
+            		VIDEO_RESOLUTION="$2"
+            		USE_CUSTOM_VIDEO_RESOLUTION=1
+            		arg_tools set_token 5
+            		shift 2
+            	fi
+            	;;
             -b1|--audio-bitrate)
                 if [[ -n "$2" && "$2" != -* ]]; then
                     MP3_RATE="$2"
+                    arg_tools set_token 5
                     shift 2
+                elif [[ "$2" -gt 200 ]]; then
+                	echo -e "OPUS bitrate can not go above 200k."
+                	exit 1
                 else
                     echo "Error: -b1 requires an argument" >&2
                     exit 1
@@ -74,6 +105,7 @@ check_args() {
             -b2|--video-bitrate)
                 if [[ -n "$2" && "$2" != -* ]]; then
                     MP4_RATE="$2"
+                    arg_tools set_token 5
                     shift 2
                 else
                     echo "Error: -b2 requires an argument" >&2
@@ -95,7 +127,7 @@ check_args() {
     done
 
     if [ "$#" -lt 1 ]; then
-        echo -e "No input file supplied.\nPlease supply at least the input filename.\nUsage: badvideo [-v] [-h] [-d|--disable-delete] [-D|--debug] [-p1|--audio-passes] <audio_passes> [-p2|--video-passes] <video_passes> [-b1|--audio-bitrate] <audio_bitrate> [-b2|--video-bitrate] <video_bitrate> <input>"
+        echo -e "No input file supplied.\nPlease supply at least the input filename.\nUsage: badvideo [-v] [-h] [-d|--disable-delete] [-D|--debug] [-p1|--audio-passes] <audio_passes> [-p2|--video-passes] <video_passes> [-b1|--audio-bitrate] <audio_bitrate> [-b2|--video-bitrate] <video_bitrate> <input> [-r|--resolution] <widthxheight>"
         exit 1
     fi
 
@@ -197,10 +229,10 @@ badvideo() {
 	done
 	echo "Ruin your videos in SECONDS!"
 	echo -e "$START_PREFIX Starting badvideo v$VERSION"
-	if [[ "$MP3_RATE" == "20k" && "$MP4_RATE" == "50k" && "$NUM_MP3_PASSES" == 10 && "$NUM_MP4_PASSES" == 2 ]]; then
+	if [[ "$CUSTOM_SETTINGS_TOKEN" -eq 0 ]]; then
 		echo -e "$START_PREFIX Using default settings"
 	else
-		echo -e "$START_PREFIX Using user specified settings"
+		echo -e "$WARNING_PREFIX Using user specified settings"
 	fi
 	# Variable setup for jobs
 	INPUT_DIR=$(dirname "$VIDEO_INPUT")
@@ -253,7 +285,11 @@ badvideo() {
 	do
 		OUTPUT_MP4="${WORK_DIR}${VIDEO_INPUT_NOEXT}_${i}.mp4"
 		echo -e "$PASS_PREFIX Pass: ${i}"
-		ffmpeg -y -v quiet -stats -i "$VIDEO_NO_AUDIO" -c:v libx264 -b:v "$MP4_RATE" -preset veryfast "$OUTPUT_MP4" || die
+		if [[ "$USE_CUSTOM_VIDEO_RESOLUTION" -eq 1 ]]; then
+			ffmpeg -y -v quiet -stats -i "$VIDEO_NO_AUDIO" -vf scale="$VIDEO_RESOLUTION" -c:v libx264 -b:v "$MP4_RATE" -preset veryfast "$OUTPUT_MP4" || die
+		else
+			ffmpeg -y -v quiet -stats -i "$VIDEO_NO_AUDIO" -c:v libx264 -b:v "$MP4_RATE" -preset veryfast "$OUTPUT_MP4" || die
+		fi
 		if [ $i -gt 1 ]; then
 			rm "$VIDEO_NO_AUDIO"
 		fi
